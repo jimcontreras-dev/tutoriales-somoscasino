@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Nuestras Salas - SomosCasino Map</title>
+
+    <!-- Seguridad: política de referencia -->
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+
+    <!-- Seguridad: Content Security Policy -->
+    <!-- Nota: frame-ancestors solo funciona como HTTP header, no como meta tag.  -->
+    <!-- GitHub Pages no permite headers personalizados, por lo que el iframe     -->
+    <!-- puede ser embebido desde cualquier dominio (comportamiento deseado).     -->
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src  'unsafe-inline' https://unpkg.com;
+        style-src   'unsafe-inline' https://fonts.googleapis.com https://unpkg.com;
+        font-src    https://fonts.gstatic.com;
+        img-src     * data: blob:;
+        connect-src https://raw.githubusercontent.com;
+    ">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <style>
+        :root {
+            --bg-dark:        #0E011D;
+            --surface-low:    #211536;
+            --surface-mid:    #26193A;
+            --surface-high:   #3C2E50;
+            --panel-bg:       rgba(38, 25, 58, 0.75);
+            --primary:        #EB7A00;
+            --primary-hover:  #D46F02;
+            --on-surface:     #ECDCFF;
+            --text-muted:     rgba(236, 220, 255, 0.5);
+            --hover-border:   #6E4F8F;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--on-surface);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .main-header {
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-sizing: border-box;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .btn-back {
+            color: white;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+
+        .btn-back:hover {
+            transform: translateX(-5px);
+        }
+
+        .header-left h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+
+        .header-left p {
+            margin: 0;
+            font-size: 12px;
+            color: var(--primary);
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Layout principal */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 420px;
+            gap: 30px;
+            width: 95%;
+            max-width: 1400px;
+            margin: 0 auto 50px auto;
+            flex-grow: 1;
+        }
+
+        .map-outer {
+            background: var(--surface-low);
+            border-radius: 30px;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            overflow: hidden;
+            height: 700px;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            border-radius: 20px;
+        }
+
+        .leaflet-container {
+            background: #f0f2f5 !important;
+        }
+
+        .leaflet-bottom.leaflet-right {
+            display: none;
+        }
+
+        .custom-div-icon {
+            background: none;
+            border: none;
+        }
+
+        /* Marcadores de SALA (zoom alto) */
+        .marker-pin-custom {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transform: translate(-50%, -100%);
+        }
+
+        .marker-pin-label {
+            background: var(--primary);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 800;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .marker-pin-icon {
+            color: var(--primary);
+            font-size: 28px;
+            line-height: 1;
+            transition: all 0.3s ease;
+        }
+
+        .marker-active .marker-pin-label {
+            background: #ffffff;
+            color: var(--primary);
+            transform: scale(1.1) translateY(-5px);
+            border: 2px solid var(--primary);
+            box-shadow: 0 10px 25px rgba(235, 122, 0, 0.4);
+        }
+
+        .marker-active .marker-pin-icon {
+            color: var(--primary);
+            transform: scale(1.1);
+        }
+
+        /* Marcadores de CIUDAD (zoom bajo) */
+        .city-marker-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transform: translate(-50%, -100%);
+            cursor: pointer;
+        }
+
+        .city-marker-bubble {
+            background: linear-gradient(135deg, var(--surface-low), var(--surface-high));
+            color: var(--on-surface);
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 800;
+            white-space: nowrap;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            margin-bottom: 1px;
+        }
+
+        .city-marker-wrap:hover .city-marker-bubble {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(235, 122, 0, 0.4);
+            border-color: var(--hover-border);
+        }
+
+        .city-marker-count {
+            background: var(--primary);
+            border-radius: 8px;
+            padding: 0px 4px;
+            font-size: 9px;
+            font-weight: 900;
+            color: white;
+        }
+
+        .city-marker-arrow {
+            color: var(--primary);
+            font-size: 16px;
+            line-height: 1;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+
+        /* Panel de tarjetas */
+        .cards-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            max-height: 700px;
+        }
+
+        .cards-header {
+            margin: 0 0 20px 0;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .cards-container {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding-right: 8px;
+        }
+
+        .cards-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .cards-container::-webkit-scrollbar-thumb {
+            background: var(--surface-high);
+            border-radius: 10px;
+        }
+
+        .sala-card {
+            background: var(--surface-low);
+            border-radius: 20px;
+            padding: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            outline: 2px solid transparent;
+            outline-offset: 0px;
+            display: flex;
+            gap: 16px;
+            cursor: pointer;
+            transition: background 0.3s ease, border-color 0.15s ease, outline-color 0.15s ease;
+        }
+
+        .sala-card:hover,
+        .sala-card.active {
+            background: var(--surface-mid);
+            border-color: var(--primary);
+            outline-color: var(--hover-border);
+        }
+
+        .sala-image {
+            width: 120px;
+            height: 80px;
+            border-radius: 10px;
+            background: var(--bg-dark);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 6px;
+            box-sizing: border-box;
+        }
+
+        .sala-img-element {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        .sala-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            overflow: hidden;
+        }
+
+        .sala-header h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sala-address {
+            font-size: 12px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            line-height: 1.2;
+            color: rgba(236, 220, 255, 0.5);
+        }
+
+        .sala-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .btn-llegar {
+            flex: 1;
+            background: var(--primary);
+            color: white;
+            text-decoration: none;
+            padding: 4px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            transition: background 0.3s;
+        }
+
+        .btn-llegar:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-maps {
+            flex: 1;
+            background: var(--surface-high);
+            color: var(--on-surface);
+            text-decoration: none;
+            padding: 6px 12px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            transition: background 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-maps:hover {
+            background: var(--hover-border);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 0 15px;
+            }
+
+            .cards-panel {
+                max-height: none;
+                height: auto;
+            }
+
+            .map-outer {
+                height: 500px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .main-header {
+                padding: 15px;
+            }
+
+            .sala-card {
+                padding: 12px;
+            }
+
+            .sala-image {
+                width: 60px;
+                height: 60px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="main-header">
+        <div class="header-left">
+            <div>
+                <h1>Nuestras Salas</h1>
+                <p>LOCALIZA TU CENTRO DE JUEGO</p>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-layout">
+        <div class="map-outer">
+            <div id="map"></div>
+        </div>
+        <aside class="cards-panel">
+            <h2 class="cards-header">21 Sedes Disponibles</h2>
+            <div class="cards-container" id="cards-list"></div>
+        </aside>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        // ─────────────────────────────────────────────
+        // DATOS DE SALAS
+        // ─────────────────────────────────────────────
+        const salas = [
+            { id: "allegro", name: "ALLEGRO", city: "Piura", address: "Av. Grau 559", coords: [-5.195792451373947, -80.63023352933409], img: "https://i.imgur.com/PV5k29b.png", link: "https://www.facebook.com/profile.php?id=100063930709138" },
+            { id: "bagdad", name: "BAGDAD", city: "Chiclayo", address: "Jr. Elias Aguirre 498", coords: [-6.771737, -79.840525], img: "https://i.imgur.com/tRuolWe.png", link: "https://www.facebook.com/SalaDeJuegosBagdad/" },
+            { id: "balta", name: "BALTA SLOTS", city: "Chiclayo", address: "Av. Jose Balta 525", coords: [-6.773564, -79.838670], img: "https://i.imgur.com/Z9JZAr8.png", link: "https://www.facebook.com/salabaltaslots/" },
+            { id: "damasco", name: "DAMASCO", city: "Tacna", address: "Av. San Martin 597", coords: [-18.012413, -70.248909], img: "https://i.imgur.com/XZNJoww.png", link: "https://casinodamasco.pe/" },
+            { id: "excalibur", name: "EXCALIBUR", city: "Trujillo", address: "Jr. Francisco Pizarro 657", coords: [-8.109757, -79.026053], img: "https://i.imgur.com/xFifjPg.png", link: "https://casinoexcalibur.pe/#home" },
+            { id: "gangas", name: "GANGAS", city: "Trujillo", address: "Jr. Gamarra 569", coords: [-8.111137, -79.026142], img: "https://i.imgur.com/vqbsC6E.png", link: "https://www.facebook.com/saladejuegosgangas/" },
+            { id: "islatesoro", name: "ISLA DEL TESORO", city: "Tacna", address: "Av. San Martin 680", coords: [-18.011837, -70.248341], img: "https://i.imgur.com/geBSmWo.png", link: "https://www.casinoisladeltesoro.pe/" },
+            { id: "keops", name: "KEOPS", city: "Trujillo", address: "Jr. Francisco Pizarro 611", coords: [-8.110412701946426, -79.02666934662106], img: "https://i.imgur.com/VJVR1h9.png", link: "https://casinokeops.pe/#" },
+            { id: "cascada", name: "LA CASCADA", city: "Tumbes", address: "Jr. Simon Bolivar 289", coords: [-3.5688070437835635, -80.45929222798497], img: "https://i.imgur.com/MuL0m0H.png", link: "https://www.facebook.com/SalaDeJuegosLaCascada/" },
+            { id: "musas", name: "LAS MUSAS", city: "Chiclayo", address: "Calle Los Faiques 101", coords: [-6.77945212317359, -79.83899096152402], img: "https://i.imgur.com/glA1XHD.png", link: "https://www.facebook.com/LasMusasChiclayo/" },
+            { id: "mambos", name: "MAMBOS", city: "Lima", address: "Av. Benavides 5205", coords: [-12.1291537594186, -76.98283872686005], img: "https://i.imgur.com/4BFijv9.png", link: "https://casinomambos.pe/#home" },
+            { id: "mantra", name: "MANTRA-HUACHO", city: "Huacho", address: "Av. 28 de Julio 224", coords: [-11.107263186615903, -77.60662019472568], img: "https://i.imgur.com/KGiuj5i.png", link: "https://www.facebook.com/saladejuegosmantra/" },
+            { id: "mega", name: "MEGA CASINO", city: "Lima", address: "Av. Alfredo Mendiola 2300", coords: [-11.993000648555464, -77.06335471448068], img: "https://i.imgur.com/5BIs6UM.png", link: "https://megacasino.pe/#home" },
+            { id: "miami", name: "MIAMI", city: "Chimbote", address: "Jr. Manuel Ruiz 382", coords: [-9.075296990057382, -78.59101825719755], img: "https://i.imgur.com/wslAqSR.png", link: "https://www.facebook.com/profile.php?id=100063883401705" },
+            { id: "mrouchimbote", name: "MOULIN ROUGE-CHIMBOTE", city: "Chimbote", address: "Av. Victor Raul Haya de la Torre 464", coords: [-9.07544080234655, -78.59366332766349], img: "https://i.imgur.com/E0phY9J.png", link: "https://www.facebook.com/MoulinRougeChimbote/" },
+            { id: "mroutrujillo", name: "MOULIN ROUGE-TRUJILLO", city: "Trujillo", address: "Jr. Mariscal Orbegoso 524", coords: [-8.11205842619336, -79.02750630322069], img: "https://i.imgur.com/E0phY9J.png", link: "https://www.facebook.com/moulinrougetrujillo/" },
+            { id: "solidgold", name: "SOLID GOLD-CHICLAYO", city: "Chiclayo", address: "Av. Federico Villarreal 115", coords: [-6.77115455629827, -79.84627903962853], img: "https://i.imgur.com/o5jdC1K.png", link: "https://www.facebook.com/profile.php?id=100063595539728" },
+            { id: "star", name: "CASINO STAR", city: "Trujillo", address: "Jr. Orbegoso 554", coords: [-8.11223457098377, -79.02730855257511], img: "https://i.imgur.com/Rnb1OTd.png", link: "https://www.facebook.com/CasinoStarTrujillo/" },
+            { id: "winandwin", name: "WIN & WIN", city: "Piura", address: "Calle Arequipa 673, piura", coords: [-5.195375153252828, -80.62744703914402], img: "https://i.imgur.com/dvN2dfu.png", link: "https://www.facebook.com/casinowinandwin/" },
+            { id: "winmeier", name: "WIN MEIER SLOTS Y MESAS", city: "Chiclayo", address: "Av. Francisco Bolognesi 756", coords: [-6.775739414768282, -79.83791468851379], img: "https://i.imgur.com/Mr6ivyo.png", link: "https://casinoswm.pe/#cyber" },
+            { id: "polo", name: "EL POLO SLOTS Y MESAS", city: "Lima", address: "Av. La Encalada 1415", coords: [-12.101447, -76.970214], img: "https://i.imgur.com/8OFeAkg.png", link: "https://www.google.com/maps/search/?api=1&query=El+Polo+Slots+y+Mesas,Surco,Lima,Peru" }
+        ];
+
+        // ─────────────────────────────────────────────
+        // AGRUPACIÓN POR CIUDAD
+        // ─────────────────────────────────────────────
+        const cityGroups = {};
+        salas.forEach(sala => {
+            if (!cityGroups[sala.city]) cityGroups[sala.city] = [];
+            cityGroups[sala.city].push(sala);
+        });
+
+        function getCityCenter(city) {
+            const list = cityGroups[city];
+            return [
+                list.reduce((s, r) => s + r.coords[0], 0) / list.length,
+                list.reduce((s, r) => s + r.coords[1], 0) / list.length
+            ];
+        }
+
+        // Fallback para imágenes rotas
+        function handleImgError(img) {
+            const icon = document.createElement('span');
+            icon.className = 'material-icons';
+            icon.style.cssText = 'font-size:32px;color:rgba(255,255,255,0.2)';
+            icon.textContent = 'casino';
+            img.replaceWith(icon);
+        }
+
+        // ─────────────────────────────────────────────
+        // INICIALIZACIÓN DEL MAPA
+        // ─────────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', () => {
+            const peruBounds = L.latLngBounds(L.latLng(-18.5, -81.5), L.latLng(0.5, -68.5));
+
+            const map = L.map('map', {
+                maxBounds: peruBounds,
+                maxBoundsViscosity: 1.0,
+                minZoom: 5
+            });
+
+            // Mostrar Perú completo ajustado al tamaño del contenedor
+            map.fitBounds([[-18.35, -81.33], [-0.04, -68.65]]);
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+            }).addTo(map);
+
+            // Máscara sobre países (el mar queda sin máscara)
+            // Cargamos todos los países y aplicamos gris a todos excepto Perú
+            fetch('https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json')
+                .then(r => r.json())
+                .then(data => {
+                    // Gris sobre todos los países excepto Perú
+                    L.geoJSON(data, {
+                        interactive: false,
+                        filter: f => f.id !== 'PER',
+                        style: { stroke: false, fillColor: '#6b7280', fillOpacity: 0.45 }
+                    }).addTo(map);
+
+                })
+                .catch(() => { });
+
+            // Dos capas separadas: salas individuales y ciudades
+            const salaLayer = L.layerGroup();
+            const cityLayer = L.layerGroup();
+
+            const markers = {};   // { salaId: L.marker }
+            const cityMarkers = {};   // { ciudad: L.marker }
+
+            // ── Crear tarjetas y marcadores de SALA ──
+            const cardsContainer = document.getElementById('cards-list');
+
+            salas.forEach(sala => {
+                // Tarjeta
+                const card = document.createElement('div');
+                card.className = 'sala-card';
+                card.id = `card-${sala.id}`;
+                card.setAttribute('data-id', sala.id);
+
+                const imageContent = sala.img
+                    ? `<img src="${sala.img}" alt="${sala.name}" class="sala-img-element" onerror="handleImgError(this)">`
+                    : `<span class="material-icons" style="font-size:32px;color:rgba(255,255,255,0.2)">casino</span>`;
+
+                const mapsLink = `https://www.google.com/maps/dir/?api=1&destination=${sala.coords[0]},${sala.coords[1]}`;
+
+                card.innerHTML = `
+                    <div class="sala-image">${imageContent}</div>
+                    <div class="sala-info">
+                        <div class="sala-header"><h3>${sala.name}</h3></div>
+                        <div class="sala-address">
+                            <span class="material-icons" style="font-size:14px">location_on</span>
+                            ${sala.address}, ${sala.city}
+                        </div>
+                        <div class="sala-actions">
+                            <a class="btn-llegar" href="${sala.link}" target="_blank" rel="noopener noreferrer nofollow">
+                                <span class="material-icons" style="font-size:14px">public</span> Visitar
+                            </a>
+                            <a class="btn-maps" href="${mapsLink}" target="_blank" rel="noopener noreferrer nofollow" data-maps-id="${sala.id}">
+                                <span class="material-icons" style="font-size:14px">directions</span> Cómo llegar
+                            </a>
+                        </div>
+                    </div>`;
+
+                card.addEventListener('click', () => highlightSala(sala.id));
+                cardsContainer.appendChild(card);
+
+                // Marcador de sala
+                const markerIcon = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `<div class="marker-pin-custom" data-marker-id="${sala.id}">
+                               <div class="marker-pin-label">${sala.name}</div>
+                               <span class="material-icons marker-pin-icon">location_on</span>
+                           </div>`,
+                    iconSize: [0, 0],
+                    iconAnchor: [0, 0]
+                });
+
+                const marker = L.marker(sala.coords, { icon: markerIcon });
+                marker.on('click', () => highlightSala(sala.id));
+                markers[sala.id] = marker;
+                salaLayer.addLayer(marker);
+            });
+
+            // ── Crear marcadores de CIUDAD ──
+            Object.entries(cityGroups).forEach(([city, citySalas]) => {
+                const center = getCityCenter(city);
+
+                const cityIcon = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `<div class="city-marker-wrap" data-city="${city}">
+                               <div class="city-marker-bubble">
+                                   ${city}
+                                   <span class="city-marker-count">${citySalas.length}</span>
+                               </div>
+                               <span class="material-icons city-marker-arrow">location_on</span>
+                           </div>`,
+                    iconSize: [0, 0],
+                    iconAnchor: [0, 0]
+                });
+
+                const cityMarker = L.marker(center, { icon: cityIcon });
+                cityMarker.on('click', () => {
+                    const cityCoords = cityGroups[city].map(s => s.coords);
+
+                    // Al terminar la animación, mostrar siempre las salas individuales
+                    // (moveend dispara después de zoomend, sobreescribiendo updateLayers)
+                    map.once('moveend', () => {
+                        if (map.hasLayer(cityLayer)) map.removeLayer(cityLayer);
+                        if (!map.hasLayer(salaLayer)) salaLayer.addTo(map);
+                    });
+
+                    if (cityCoords.length === 1) {
+                        map.setView(cityCoords[0], 15, { animate: true });
+                    } else {
+                        map.fitBounds(L.latLngBounds(cityCoords), {
+                            padding: [80, 80],
+                            maxZoom: 15,
+                            animate: true
+                        });
+                    }
+                });
+                cityMarkers[city] = cityMarker;
+                cityLayer.addLayer(cityMarker);
+            });
+
+            // ── Lógica de capas según zoom ──
+            // Zoom < 11 → marcadores de ciudad | Zoom ≥ 11 → marcadores de sala
+            const ZOOM_THRESHOLD = 11;
+
+            function updateLayers() {
+                if (map.getZoom() < ZOOM_THRESHOLD) {
+                    if (map.hasLayer(salaLayer)) map.removeLayer(salaLayer);
+                    if (!map.hasLayer(cityLayer)) cityLayer.addTo(map);
+                } else {
+                    if (map.hasLayer(cityLayer)) map.removeLayer(cityLayer);
+                    if (!map.hasLayer(salaLayer)) salaLayer.addTo(map);
+                }
+            }
+
+            map.on('zoomend', updateLayers);
+            updateLayers();
+
+            // ── Función de resaltado ──
+            function highlightSala(id) {
+                document.querySelectorAll('.sala-card').forEach(c => c.classList.remove('active'));
+                document.querySelectorAll('[data-marker-id]').forEach(el => el.classList.remove('marker-active'));
+
+                const card = document.getElementById(`card-${id}`);
+                if (card) {
+                    card.classList.add('active');
+                    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+
+                const markerEl = document.querySelector(`[data-marker-id="${id}"]`);
+                if (markerEl) markerEl.classList.add('marker-active');
+
+                const sala = salas.find(s => s.id === id);
+                if (sala) map.setView(sala.coords, 16, { animate: true });
+            }
+
+        });
+
+    </script>
+</body>
+
+</html>
