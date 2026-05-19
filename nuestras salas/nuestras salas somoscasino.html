@@ -268,19 +268,16 @@
             border-radius: 20px;
             padding: 16px;
             border: 2px solid rgba(255, 255, 255, 0.1);
-            outline: 2px solid transparent;
-            outline-offset: 0px;
             display: flex;
             gap: 16px;
             cursor: pointer;
-            transition: background 0.3s ease, border-color 0.15s ease, outline-color 0.15s ease;
+            transition: background 0.3s ease, border-color 0.15s ease;
         }
 
         .sala-card:hover,
         .sala-card.active {
             background: var(--surface-mid);
-            border-color: var(--primary);
-            outline-color: var(--hover-border);
+            border-color: var(--hover-border);
         }
 
         .sala-image {
