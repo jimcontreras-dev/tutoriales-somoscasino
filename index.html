@@ -60,6 +60,14 @@
         .card-hover-border:hover {
             outline-color: #6e4f8f;
         }
+
+        #video-modal {
+            display: none;
+        }
+
+        #video-modal.open {
+            display: flex;
+        }
     </style>
 </head>
 
@@ -73,7 +81,7 @@
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
                 <!-- Card 1 -->
-                <div
+                <div onclick="openVideo('1167446327', 'Cómo registrarse en SomosCasino')"
                     class="bg-surface-container-low border border-white/10 rounded-xl overflow-hidden group cursor-pointer card-hover-border transition-all duration-300 p-md flex flex-col gap-md">
                     <div class="relative aspect-[16/9] w-full rounded-lg overflow-hidden">
                         <img src="Med _ Registrarse.png" alt="Cómo registrarse"
@@ -93,7 +101,7 @@
                     </div>
                 </div>
                 <!-- Card 2 -->
-                <div
+                <div onclick="openVideo('1167446290', 'Cómo depositar en SomosCasino')"
                     class="bg-surface-container-low border border-white/10 rounded-xl overflow-hidden group cursor-pointer card-hover-border transition-all duration-300 p-md flex flex-col gap-md">
                     <div class="relative aspect-[16/9] w-full rounded-lg overflow-hidden">
                         <img src="Med _ Depositar.png" alt="Cómo depositar"
@@ -113,7 +121,7 @@
                     </div>
                 </div>
                 <!-- Card 3 -->
-                <div
+                <div onclick="openVideo('1167446364', 'Cómo retirar en SomosCasino')"
                     class="bg-surface-container-low border border-white/10 rounded-xl overflow-hidden group cursor-pointer card-hover-border transition-all duration-300 p-md flex flex-col gap-md">
                     <div class="relative aspect-[16/9] w-full rounded-lg overflow-hidden">
                         <img src="Med _ Retirar.png" alt="Cómo retirar"
@@ -133,7 +141,7 @@
                     </div>
                 </div>
                 <!-- Card 4 -->
-                <div
+                <div onclick="openVideo('1093823859', 'Juego Responsable en SomosCasino')"
                     class="bg-surface-container-low border border-white/10 rounded-xl overflow-hidden group cursor-pointer card-hover-border transition-all duration-300 p-md flex flex-col gap-md">
                     <div class="relative aspect-[16/9] w-full rounded-lg overflow-hidden">
                         <img src="Med _ Responsable.png" alt="Juego responsable"
@@ -155,6 +163,61 @@
             </div>
         </section>
     </main>
+
+    <!-- Video Modal -->
+    <div id="video-modal"
+        class="fixed inset-0 z-50 items-center justify-center bg-black/80"
+        onclick="closeVideo(event)">
+        <div class="relative w-full max-w-4xl mx-4" onclick="event.stopPropagation()">
+            <button onclick="closeVideo()"
+                class="absolute -top-10 right-0 text-white/70 hover:text-white transition-colors flex items-center gap-1 text-sm">
+                <span class="material-symbols-outlined text-xl">close</span>
+                Cerrar
+            </button>
+            <div class="relative w-full" style="padding-top: 56.25%;">
+                <iframe id="video-iframe"
+                    src=""
+                    frameborder="0"
+                    allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
+                    style="position:absolute;top:0;left:0;width:100%;height:100%;"
+                    title="">
+                </iframe>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://player.vimeo.com/api/player.js"></script>
+    <script>
+        function openVideo(videoId, title) {
+            const modal = document.getElementById('video-modal');
+            const iframe = document.getElementById('video-iframe');
+            iframe.src = 'https://player.vimeo.com/video/' + videoId + '?badge=0&autopause=0&background=0&byline=0&portrait=0&title=1&controls=1&autoplay=1';
+            iframe.title = title;
+            modal.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeVideo(event) {
+            if (event && event.target !== document.getElementById('video-modal')) return;
+            const modal = document.getElementById('video-modal');
+            const iframe = document.getElementById('video-iframe');
+            iframe.src = '';
+            modal.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('video-modal');
+                if (modal.classList.contains('open')) {
+                    const iframe = document.getElementById('video-iframe');
+                    iframe.src = '';
+                    modal.classList.remove('open');
+                    document.body.style.overflow = '';
+                }
+            }
+        });
+    </script>
 </body>
 
 </html>
