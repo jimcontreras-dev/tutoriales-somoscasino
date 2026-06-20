@@ -66,12 +66,12 @@
         }
 
         #video-modal.open {
-            display: flex;
+            display: block;
         }
     </style>
 </head>
 
-<body class="font-body-md text-on-surface min-h-screen flex flex-col bg-background">
+<body class="relative font-body-md text-on-surface min-h-screen flex flex-col bg-background">
     <main class="flex-grow max-w-[1440px] mx-auto w-full px-container-margin py-xl flex gap-xl">
         <section class="w-full">
             <div class="mb-xl">
@@ -81,7 +81,7 @@
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
                 <!-- Card 1 -->
-                <div onclick="openVideo('1167446327', 'Cómo registrarse en SomosCasino')"
+                <div onclick="openVideo(event, '1167446327', 'Cómo registrarse en SomosCasino')"
                     class="bg-surface-container-low border border-white/10 rounded-xl overflow-hidden group cursor-pointer card-hover-border transition-all duration-300 p-md flex flex-col gap-md">
                     <div class="relative aspect-[16/9] w-full rounded-lg overflow-hidden">
                         <img src="Med _ Registrarse.png" alt="Cómo registrarse"
@@ -101,7 +101,7 @@
                     </div>
                 </div>
                 <!-- Card 2 -->
-                <div onclick="openVideo('1167446290', 'Cómo depositar en SomosCasino')"
+                <div onclick="openVideo(event, '1167446290', 'Cómo depositar en SomosCasino')"
                     class="bg-surface-container-low border border-white/10 rounded-xl overflow-hidden group cursor-pointer card-hover-border transition-all duration-300 p-md flex flex-col gap-md">
                     <div class="relative aspect-[16/9] w-full rounded-lg overflow-hidden">
                         <img src="Med _ Depositar.png" alt="Cómo depositar"
@@ -121,7 +121,7 @@
                     </div>
                 </div>
                 <!-- Card 3 -->
-                <div onclick="openVideo('1167446364', 'Cómo retirar en SomosCasino')"
+                <div onclick="openVideo(event, '1167446364', 'Cómo retirar en SomosCasino')"
                     class="bg-surface-container-low border border-white/10 rounded-xl overflow-hidden group cursor-pointer card-hover-border transition-all duration-300 p-md flex flex-col gap-md">
                     <div class="relative aspect-[16/9] w-full rounded-lg overflow-hidden">
                         <img src="Med _ Retirar.png" alt="Cómo retirar"
@@ -141,7 +141,7 @@
                     </div>
                 </div>
                 <!-- Card 4 -->
-                <div onclick="openVideo('1093823859', 'Juego Responsable en SomosCasino')"
+                <div onclick="openVideo(event, '1093823859', 'Juego Responsable en SomosCasino')"
                     class="bg-surface-container-low border border-white/10 rounded-xl overflow-hidden group cursor-pointer card-hover-border transition-all duration-300 p-md flex flex-col gap-md">
                     <div class="relative aspect-[16/9] w-full rounded-lg overflow-hidden">
                         <img src="Med _ Responsable.png" alt="Juego responsable"
@@ -166,9 +166,11 @@
 
     <!-- Video Modal -->
     <div id="video-modal"
-        class="fixed inset-0 z-50 items-center justify-center bg-black/80"
+        class="absolute inset-0 z-50 bg-black/80"
         onclick="closeVideo(event)">
-        <div class="relative w-full max-w-4xl mx-4" onclick="event.stopPropagation()">
+        <div id="video-modal-content"
+            class="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl px-4"
+            onclick="event.stopPropagation()">
             <button onclick="closeVideo()"
                 class="absolute -top-10 right-0 text-white/70 hover:text-white transition-colors flex items-center gap-1 text-sm">
                 <span class="material-symbols-outlined text-xl">close</span>
@@ -188,13 +190,26 @@
 
     <script src="https://player.vimeo.com/api/player.js"></script>
     <script>
-        function openVideo(videoId, title) {
+        function openVideo(event, videoId, title) {
             const modal = document.getElementById('video-modal');
+            const content = document.getElementById('video-modal-content');
             const iframe = document.getElementById('video-iframe');
             iframe.src = 'https://player.vimeo.com/video/' + videoId + '?badge=0&autopause=0&background=0&byline=0&portrait=0&title=1&controls=1&autoplay=1';
             iframe.title = title;
             modal.classList.add('open');
             document.body.style.overflow = 'hidden';
+
+            // Anclar el modal a la tarjeta tocada (en coordenadas del documento) para que
+            // quede a la vista incluso cuando la página va embebida en un iframe de alto
+            // automático, donde position:fixed cubriría todo el alto del contenido.
+            const card = event && event.currentTarget;
+            const rect = card ? card.getBoundingClientRect() : null;
+            const cardCenter = rect
+                ? rect.top + window.scrollY + rect.height / 2
+                : window.scrollY + window.innerHeight / 2;
+            const halfHeight = content.offsetHeight / 2;
+            // Dejar 56px arriba para que el botón "Cerrar" no quede fuera del documento.
+            content.style.top = Math.max(cardCenter, halfHeight + 56) + 'px';
         }
 
         function closeVideo(event) {
